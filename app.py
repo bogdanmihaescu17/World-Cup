@@ -728,7 +728,7 @@ def predictions():
         score1 = int(request.form.get("pred_score1"))
         score2 = int(request.form.get("pred_score2"))
 
-        match = Match.query.get_or_404(match_id)
+        match = db.get_or_404(Match, match_id)
         existing = Prediction.query.filter_by(user_id=current_user.id, match_id=match.id).first()
         if not can_submit_prediction(match, existing):
             if existing:
@@ -874,7 +874,7 @@ def admin_create_user():
 @login_required
 @admin_required
 def admin_update_user_role(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     role = request.form.get("role", "user")
     if role not in ("admin", "user"):
         role = "user"
@@ -888,7 +888,7 @@ def admin_update_user_role(user_id):
 @login_required
 @admin_required
 def admin_delete_user(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     if user.id == current_user.id:
         flash("You cannot delete your own admin account.", "error")
         return redirect(url_for("admin_panel"))
@@ -903,7 +903,7 @@ def admin_delete_user(user_id):
 @login_required
 @admin_required
 def admin_reset_password(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     new_password = request.form.get("new_password", "").strip()
     if len(new_password) < 6:
         flash("Password must be at least 6 characters.", "error")
@@ -940,7 +940,7 @@ def admin_set_official_score():
     match_id = int(request.form.get("match_id"))
     score1 = int(request.form.get("official_score1"))
     score2 = int(request.form.get("official_score2"))
-    match = Match.query.get_or_404(match_id)
+    match = db.get_or_404(Match, match_id)
     match.official_score1 = score1
     match.official_score2 = score2
     match.official_set_at = datetime.utcnow()
@@ -954,7 +954,7 @@ def admin_set_official_score():
 @admin_required
 def admin_clear_official_score():
     match_id = int(request.form.get("match_id"))
-    match = Match.query.get_or_404(match_id)
+    match = db.get_or_404(Match, match_id)
     match.official_score1 = None
     match.official_score2 = None
     match.official_set_at = None
