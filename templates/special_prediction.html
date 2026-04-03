@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-2">Special Prediction</h3>
+<p class="text-muted mb-4">
+  Predict the tournament Winner and top Goalscorer before the first match starts.
+  Correct Winner = <strong>5 points</strong>. Correct Goalscorer = <strong>10 points</strong>.
+</p>
+
+{% if sp %}
+<div class="panel-subtle mb-4">
+  <div class="section-title">Your prediction</div>
+  <table class="table table-sm table-bordered mb-0">
+    <tr>
+      <th style="width: 30%;">Winner</th>
+      <td class="fw-semibold">{{ sp.winner }}</td>
+    </tr>
+    <tr>
+      <th>Top Goalscorer</th>
+      <td class="fw-semibold">{{ sp.goalscorer }}</td>
+    </tr>
+  </table>
+  <span class="badge text-bg-success mt-2">Submitted</span>
+  {% if official and (official.winner or official.goalscorer) %}
+  <span class="badge text-bg-primary mt-2">Points earned: {{ sp_points }}</span>
+  {% endif %}
+</div>
+
+{% elif started %}
+<div class="panel-subtle mb-4">
+  <p class="mb-0 text-muted">The tournament has started. Special predictions are locked.</p>
+</div>
+
+{% else %}
+<div class="panel-subtle mb-4">
+  <div class="section-title">Submit your prediction</div>
+  <form method="post">
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Winner</label>
+      <input class="form-control" name="winner" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Top Goalscorer</label>
+      <input class="form-control" name="goalscorer" required />
+    </div>
+    <button class="btn btn-primary" type="submit">Submit</button>
+  </form>
+  <p class="small text-muted mt-2 mb-0">Once submitted, this prediction cannot be changed.</p>
+</div>
+{% endif %}
+
+{% if official and (official.winner or official.goalscorer) %}
+<div class="panel-subtle">
+  <div class="section-title">Official results (set by admin)</div>
+  <table class="table table-sm table-bordered mb-0">
+    <tr>
+      <th style="width: 30%;">Winner</th>
+      <td>{{ official.winner if official.winner else "—" }}</td>
+    </tr>
+    <tr>
+      <th>Top Goalscorer</th>
+      <td>{{ official.goalscorer if official.goalscorer else "—" }}</td>
+    </tr>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

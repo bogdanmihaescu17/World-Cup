@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-2">Knockout Stages</h3>
+<p class="text-muted mb-3">Tournament bracket from Round of 32 to the Final. Teams are auto-populated from group stage results.</p>
+
+{% if not bracket.all_gs_played %}
+<div class="alert alert-info mb-3" style="font-size:.88rem;">
+  Group stage is not yet complete. The bracket will update automatically as the admin enters results.
+</div>
+{% endif %}
+
+<style>
+  .bracket-scroll { overflow-x: auto; padding-bottom: 12px; }
+  .bracket-header {
+    display: grid;
+    grid-template-columns: 152px 16px 152px 16px 152px 16px 152px 16px 152px;
+    margin-bottom: 6px;
+  }
+  .bracket-header .rh {
+    text-align: center;
+    font-weight: 800;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--navy);
+    padding: 4px 0;
+  }
+  .bracket-grid {
+    display: grid;
+    grid-template-columns: 152px 16px 152px 16px 152px 16px 152px 16px 152px;
+    grid-template-rows: repeat(32, 22px);
+  }
+  .bm {
+    align-self: center;
+    padding: 0 1px;
+  }
+  .bm-inner {
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    overflow: hidden;
+    background: #fff;
+    font-size: .74rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .bm-team {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 6px;
+    min-height: 20px;
+    gap: 4px;
+  }
+  .bm-team + .bm-team { border-top: 1px solid #edf2f8; }
+  .bm-winner { font-weight: 700; background: #e8f5e9; }
+  .bm-tbd { color: #aaa; font-style: italic; }
+  .bm-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+  .bm-score {
+    font-weight: 700;
+    min-width: 14px;
+    text-align: right;
+    color: var(--navy);
+  }
+  .bm-no {
+    text-align: center;
+    font-size: .56rem;
+    color: #aaa;
+    line-height: 1;
+    margin-top: 1px;
+  }
+  .bracket-conn {
+    align-self: stretch;
+    display: flex;
+    align-items: stretch;
+  }
+  .bracket-conn svg { width: 100%; height: 100%; }
+  .final-highlight .bm-inner {
+    border-color: var(--orange);
+    border-width: 2px;
+    box-shadow: 0 2px 8px rgba(241,90,41,.15);
+  }
+  .winner-box {
+    text-align: center;
+    padding: 16px;
+    background: linear-gradient(135deg, #fdf2e9, #fef9f5);
+    border: 2px solid var(--orange);
+    border-radius: 12px;
+    margin-top: 16px;
+  }
+  .winner-box h4 { margin: 0; color: var(--orange); }
+  .third-place-box {
+    display: inline-block;
+    margin-top: 16px;
+  }
+  .third-place-box .bm-inner {
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    overflow: hidden;
+    background: #fff;
+    font-size: .78rem;
+    min-width: 180px;
+  }
+</style>
+
+<div class="bracket-scroll">
+  <div class="bracket-header">
+    <div class="rh">Round of 32</div>
+    <div></div>
+    <div class="rh">Round of 16</div>
+    <div></div>
+    <div class="rh">Quarter-Finals</div>
+    <div></div>
+    <div class="rh">Semi-Finals</div>
+    <div></div>
+    <div class="rh">Final</div>
+  </div>
+  <div class="bracket-grid">
+    {# Match cards #}
+    {% for e in bracket.entries %}
+    <div class="bm {{ 'final-highlight' if e.round == 'Final' else '' }}"
+         style="grid-column:{{ e.col }};grid-row:{{ e.row_start }}/{{ e.row_end + 1 }};">
+      <div class="bm-inner">
+        <div class="bm-team {{ 'bm-winner' if e.winner and e.winner == e.team1 else '' }}">
+          {% if e.team1 %}
+          <span class="bm-name" title="{{ e.team1 }} ({{ e.team1_code }})">{{ e.team1 }}</span>
+          {% else %}
+          <span class="bm-name bm-tbd">{{ e.team1_code or 'TBD' }}</span>
+          {% endif %}
+          <span class="bm-score">{{ e.score1 if e.score1 is not none else '' }}</span>
+        </div>
+        <div class="bm-team {{ 'bm-winner' if e.winner and e.winner == e.team2 else '' }}">
+          {% if e.team2 %}
+          <span class="bm-name" title="{{ e.team2 }} ({{ e.team2_code }})">{{ e.team2 }}</span>
+          {% else %}
+          <span class="bm-name bm-tbd">{{ e.team2_code or 'TBD' }}</span>
+          {% endif %}
+          <span class="bm-score">{{ e.score2 if e.score2 is not none else '' }}</span>
+        </div>
+        <div class="bm-no">M{{ e.match_no }}</div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {# SVG bracket connectors #}
+    {% for col, rs, re in bracket.connectors %}
+    <div class="bracket-conn" style="grid-column:{{ col }};grid-row:{{ rs }}/{{ re + 1 }};">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M 0 25 L 50 25 L 50 75 L 0 75 M 50 50 L 100 50"
+              stroke="#d0d5dd" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/>
+      </svg>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if bracket.third_place %}
+<div class="mt-3">
+  <div class="section-title">Third Place Play-off</div>
+  <div class="third-place-box">
+    <div class="bm-inner">
+      <div class="bm-team {{ 'bm-winner' if bracket.third_place.winner and bracket.third_place.winner == bracket.third_place.team1 else '' }}">
+        <span class="bm-name">{{ bracket.third_place.team1 or 'TBD' }}</span>
+        <span class="bm-score">{{ bracket.third_place.score1 if bracket.third_place.score1 is not none else '' }}</span>
+      </div>
+      <div class="bm-team {{ 'bm-winner' if bracket.third_place.winner and bracket.third_place.winner == bracket.third_place.team2 else '' }}">
+        <span class="bm-name">{{ bracket.third_place.team2 or 'TBD' }}</span>
+        <span class="bm-score">{{ bracket.third_place.score2 if bracket.third_place.score2 is not none else '' }}</span>
+      </div>
+      <div class="bm-no">M103</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if bracket.winner %}
+<div class="winner-box">
+  <h4>Winner: {{ bracket.winner }}</h4>
+</div>
+{% endif %}
+{% endblock %}

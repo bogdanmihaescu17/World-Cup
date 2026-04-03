@@ -30,6 +30,9 @@
         <form method="post" action="{{ url_for('admin_import_excel') }}" class="mb-2">
           <button class="btn btn-primary" type="submit">Import from Excel</button>
         </form>
+        <form method="post" action="{{ url_for('admin_sync_api') }}" class="mb-2">
+          <button class="btn btn-success" type="submit">Sync Scores from API</button>
+        </form>
         <a class="btn btn-outline-primary" href="{{ url_for('admin_export_ranking') }}">Export Ranking CSV</a>
     </div>
   </div>
@@ -62,6 +65,10 @@
                 </select>
                 <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
               </form>
+              <form method="post" action="{{ url_for('admin_reset_password', user_id=user.id) }}" class="d-flex gap-1">
+                <input class="form-control form-control-sm" type="password" name="new_password" placeholder="New password" style="width: 120px;" required minlength="6" />
+                <button class="btn btn-sm btn-outline-warning" type="submit">Reset</button>
+              </form>
               {% if current_user.id != user.id %}
               <form method="post" action="{{ url_for('admin_delete_user', user_id=user.id) }}">
                 <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
@@ -73,6 +80,30 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+
+<div class="mb-4">
+  <div class="section-title">Official Winner &amp; Top Goalscorer</div>
+  <div class="panel-subtle">
+    <form method="post" action="{{ url_for('admin_set_special_result') }}">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Winner</label>
+          <input class="form-control" name="winner" value="{{ official_special.winner if official_special else '' }}" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Top Goalscorer</label>
+          <input class="form-control" name="goalscorer" value="{{ official_special.goalscorer if official_special else '' }}" />
+        </div>
+        <div class="col-md-4">
+          <button class="btn btn-warning" type="submit">Save Official Result</button>
+        </div>
+      </div>
+      {% if official_special and official_special.set_at %}
+      <p class="small text-muted mt-2 mb-0">Last updated: {{ official_special.set_at }}</p>
+      {% endif %}
+    </form>
   </div>
 </div>
 
@@ -91,11 +122,15 @@
       <tbody>
         {% for match in matches %}
         <tr>
-          <td>#{{ match.match_no }} - {{ match.team1 }} vs {{ match.team2 }}</td>
+          <td>#{{ match.match_no }} - {{ match.team1 or match.group_code or 'TBD' }} vs {{ match.team2 or match.team2_code or 'TBD' }}</td>
           <td>{{ match.kickoff_at if match.kickoff_at else "-" }}</td>
           <td>
             {% if match.official_score1 is not none %}
-              {{ match.official_score1 }} - {{ match.official_score2 }}
+              <span class="fw-semibold">{{ match.official_score1 }} - {{ match.official_score2 }}</span>
+              <form method="post" action="{{ url_for('admin_clear_official_score') }}" class="d-inline ms-1">
+                <input type="hidden" name="match_id" value="{{ match.id }}" />
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" type="submit" title="Clear score">&times;</button>
+              </form>
             {% else %}
               <span class="text-muted">Not set</span>
             {% endif %}

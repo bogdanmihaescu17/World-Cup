@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<h3 class="mb-3">Your Predictions</h3>
+<h3 class="mb-2">Your Predictions</h3>
+<p class="text-muted mb-4">
+  Submit one prediction per match. Predictions lock 2 hours before kickoff and cannot be changed after submission.
+</p>
 <div class="table-responsive">
   <table class="table table-striped table-bordered bg-white">
     <thead>
       <tr>
         <th>Match</th>
         <th>Kickoff</th>
-        <th>Official</th>
+        <th>Official Results</th>
         <th>Your Prediction</th>
         <th>Points</th>
       </tr>
@@ -16,27 +19,30 @@
       {% for match in matches %}
       {% set p = predictions_map.get(match.id) %}
       <tr>
-        <td>#{{ match.match_no }} - {{ match.team1 }} vs {{ match.team2 }}</td>
+        <td>#{{ match.match_no }} - {{ match.team1 or match.group_code or 'TBD' }} vs {{ match.team2 or match.team2_code or 'TBD' }}</td>
         <td>{{ match.kickoff_at if match.kickoff_at else "-" }}</td>
         <td>
           {% if match.official_score1 is not none %}
             <strong>{{ match.official_score1 }} - {{ match.official_score2 }}</strong>
           {% else %}
-            <span class="text-muted">Pending admin</span>
+            <span class="text-muted">Pending</span>
           {% endif %}
         </td>
         <td>
-          {% if can_edit_prediction(match) %}
+          {% if p %}
+            <span>{{ p.pred_score1 }} - {{ p.pred_score2 }}</span>
+            <span class="badge text-bg-success">Submitted</span>
+          {% elif prediction_is_locked(match) %}
+            <span class="text-muted">—</span>
+            <span class="badge text-bg-secondary">Locked</span>
+          {% else %}
           <form method="post" class="d-flex gap-2 align-items-center">
             <input type="hidden" name="match_id" value="{{ match.id }}" />
-            <input class="form-control form-control-sm" type="number" min="0" name="pred_score1" value="{{ p.pred_score1 if p else 0 }}" style="width: 80px;" />
+            <input class="form-control form-control-sm" type="number" min="0" name="pred_score1" value="0" style="width: 80px;" />
             <span>-</span>
-            <input class="form-control form-control-sm" type="number" min="0" name="pred_score2" value="{{ p.pred_score2 if p else 0 }}" style="width: 80px;" />
-            <button class="btn btn-sm btn-primary" type="submit">Save</button>
+            <input class="form-control form-control-sm" type="number" min="0" name="pred_score2" value="0" style="width: 80px;" />
+            <button class="btn btn-sm btn-primary" type="submit">Submit</button>
           </form>
-          {% else %}
-            <span>{{ p.pred_score1 }} - {{ p.pred_score2 }}</span>
-            <span class="badge text-bg-secondary">Locked</span>
           {% endif %}
         </td>
         <td>

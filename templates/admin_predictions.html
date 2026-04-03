@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h3 class="mb-0">User Predictions</h3>
+  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_export_predictions') }}">Export CSV</a>
+</div>
+<p class="text-muted mb-3">View all predictions submitted by users. Filter by user or group.</p>
+
+<form method="get" class="row g-2 mb-4 align-items-end">
+  <div class="col-auto">
+    <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">User</label>
+    <select class="form-select form-select-sm" name="user" style="min-width:140px;">
+      <option value="">All users</option>
+      {% for u in all_users %}
+      <option value="{{ u }}" {{ 'selected' if filter_user == u else '' }}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Group</label>
+    <select class="form-select form-select-sm" name="group" style="min-width:100px;">
+      <option value="">All groups</option>
+      {% for g in all_groups %}
+      <option value="{{ g }}" {{ 'selected' if filter_group == g else '' }}>Group {{ g }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+    {% if filter_user or filter_group %}
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_predictions') }}">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+<div class="section-title">Match Predictions ({{ prediction_rows|length }})</div>
+<div class="table-wrap mb-4">
+  <table class="table table-sm table-striped table-bordered table-sticky">
+    <thead>
+      <tr>
+        <th style="width:13%;">User</th>
+        <th style="width:6%;">Match</th>
+        <th style="width:24%;">Teams</th>
+        <th style="width:12%;">Prediction</th>
+        <th style="width:12%;">Official</th>
+        <th style="width:7%;">Pts</th>
+        <th style="width:18%;">Submitted</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in prediction_rows %}
+      <tr>
+        <td class="fw-semibold">{{ r.username }}</td>
+        <td>#{{ r.match_no }}</td>
+        <td>{{ r.team1 }} vs {{ r.team2 }}</td>
+        <td class="fw-semibold">{{ r.pred_score1 }} - {{ r.pred_score2 }}</td>
+        <td>
+          {% if r.official_score1 is not none %}
+            {{ r.official_score1 }} - {{ r.official_score2 }}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if r.points is not none %}
+            {% if r.points == 3 %}
+            <span class="badge text-bg-success">3</span>
+            {% elif r.points == 1 %}
+            <span class="badge text-bg-warning">1</span>
+            {% else %}
+            <span class="badge text-bg-secondary">0</span>
+            {% endif %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.78rem;">{{ r.submitted_at.strftime('%Y-%m-%d %H:%M') if r.submitted_at else '' }}</td>
+      </tr>
+      {% endfor %}
+      {% if not prediction_rows %}
+      <tr><td colspan="7" class="text-muted text-center">No predictions found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div class="section-title">Special Predictions ({{ special_preds|length }})</div>
+{% if official and (official.winner or official.goalscorer) %}
+<p class="small text-muted mb-2">Official: Winner = <strong>{{ official.winner or '—' }}</strong>, Goalscorer = <strong>{{ official.goalscorer or '—' }}</strong></p>
+{% endif %}
+<div class="table-wrap">
+  <table class="table table-sm table-striped table-bordered table-sticky">
+    <thead>
+      <tr>
+        <th style="width:15%;">User</th>
+        <th style="width:25%;">Winner</th>
+        <th style="width:25%;">Goalscorer</th>
+        <th style="width:10%;">Pts</th>
+        <th style="width:25%;">Submitted</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sp, user in special_preds %}
+      <tr>
+        <td class="fw-semibold">{{ user.username }}</td>
+        <td>{{ sp.winner }}</td>
+        <td>{{ sp.goalscorer }}</td>
+        <td>
+          {% set sp_pts = calculate_special_points(sp) %}
+          {% if sp_pts > 0 %}
+          <span class="badge text-bg-success">{{ sp_pts }}</span>
+          {% else %}
+          <span class="text-muted">0</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.78rem;">{{ sp.created_at.strftime('%Y-%m-%d %H:%M') if sp.created_at else '' }}</td>
+      </tr>
+      {% endfor %}
+      {% if not special_preds %}
+      <tr><td colspan="5" class="text-muted text-center">No special predictions submitted.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

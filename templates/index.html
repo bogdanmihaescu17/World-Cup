@@ -1,16 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="p-4">
-  <h2 class="mb-2">Welcome, {{ current_user.username }}</h2>
-  <p class="text-muted mb-4 fs-6">
-    Predict match scores, track ranking, and compete with all users.
-  </p>
-  <div class="d-flex gap-2">
-    <a class="btn btn-primary" href="{{ url_for('predictions') }}">Go to Predictions</a>
-    <a class="btn btn-outline-primary" href="{{ url_for('ranking') }}">View Ranking</a>
-    {% if current_user.role == "admin" %}
-    <a class="btn btn-warning" href="{{ url_for('admin_panel') }}">Open Admin Console</a>
-    {% endif %}
-  </div>
+<h2 class="mb-2">Welcome, {{ current_user.username }}</h2>
+<p class="text-muted mb-4">
+  Predict match scores, track ranking, and compete with all users.
+</p>
+<div class="d-flex flex-wrap gap-2">
+  <a class="btn btn-primary" href="{{ url_for('predictions') }}">Go to Predictions</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('ranking') }}">View Ranking</a>
+  {% if current_user.role == "admin" %}
+  <a class="btn btn-warning" href="{{ url_for('admin_panel') }}">Open Admin Console</a>
+  {% endif %}
 </div>
 {% endblock %}
