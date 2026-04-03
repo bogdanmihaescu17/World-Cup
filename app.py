@@ -564,6 +564,10 @@ def ensure_default_admin():
         admin.set_password(admin_password)
         db.session.add(admin)
         db.session.commit()
+    elif not admin.check_password(admin_password):
+        admin.set_password(admin_password)
+        db.session.commit()
+        app.logger.info("Admin password re-hashed with current method.")
 
 
 def import_excel_data(file_path):
