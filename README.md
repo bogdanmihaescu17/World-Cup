@@ -58,6 +58,11 @@ Optional:
 
 - `AUTO_INIT_DB=true` (default)
 - `DEFAULT_IMPORTED_USER_PASSWORD=changeme123`
+- `LOG_LEVEL=INFO`
+
+Health check endpoint:
+
+- `GET /health` returns `200` with JSON status
 
 ## 5) First login
 

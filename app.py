@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 import os
 from datetime import datetime, timezone
 from functools import wraps
@@ -39,6 +40,23 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+
+
+def configure_logging():
+    level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    app.logger.setLevel(level)
+    if not app.logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setLevel(level)
+        formatter = logging.Formatter(
+            "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+        )
+        handler.setFormatter(formatter)
+        app.logger.addHandler(handler)
+
+
+configure_logging()
 
 
 class User(UserMixin, db.Model):
@@ -220,6 +238,12 @@ def ranking_rows():
 @login_required
 def index():
     return render_template("index.html")
+
+
+@app.route("/health")
+def health():
+    return {"status": "ok", "service": "world-cup-predictor"}, 200
+
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -430,9 +454,13 @@ def init_database():
 
 if os.getenv("AUTO_INIT_DB", "true").lower() == "true":
     init_database()
+    app.logger.info("Database auto-init completed.")
+else:
+    app.logger.info("Database auto-init skipped.")
 
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5001"))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.logger.info("Starting app on port %s (debug=%s)", port, debug)
     app.run(host="0.0.0.0", port=port, debug=debug)
