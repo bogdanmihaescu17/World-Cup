@@ -1225,9 +1225,30 @@ def admin_export_predictions():
     )
 
 
+def _run_schema_migrations():
+    """Add columns that db.create_all() won't create on existing tables."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    if "matches" in inspector.get_table_names():
+        columns = {c["name"] for c in inspector.get_columns("matches")}
+        if "team2_code" not in columns:
+            db.session.execute(text("ALTER TABLE matches ADD COLUMN team2_code VARCHAR(16)"))
+            app.logger.info("Migration: added matches.team2_code column.")
+        if "team1" in columns:
+            db.session.execute(text(
+                "ALTER TABLE matches ALTER COLUMN team1 DROP NOT NULL"
+            ))
+            db.session.execute(text(
+                "ALTER TABLE matches ALTER COLUMN team2 DROP NOT NULL"
+            ))
+    db.session.commit()
+
+
 def init_database():
     with app.app_context():
         db.create_all()
+        _run_schema_migrations()
         ensure_default_admin()
         auto_import_excel_if_empty()
 
