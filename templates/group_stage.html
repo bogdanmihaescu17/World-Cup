@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-2">Group stage</h3>
+<p class="text-muted mb-4">
+  Enter predictions for group matches. Group tables and points update after the admin sets official scores.
+</p>
+
+{% if group_stage_ranking_rows %}
+<div class="mb-4">
+  <div class="section-title">Prediction ranking (group stage only)</div>
+  <div class="table-wrap">
+    <table class="table table-sm table-bordered table-sticky">
+      <thead>
+        <tr>
+          <th style="width: 12%;">Rank</th>
+          <th>User</th>
+          <th style="width: 12%;">Role</th>
+          <th style="width: 14%;">Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in group_stage_ranking_rows %}
+        <tr>
+          <td>{{ row.rank }}</td>
+          <td class="fw-semibold">{{ row.username }}</td>
+          <td>{{ row.role }}</td>
+          <td><strong>{{ row.score }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not groups_data %}
+<p class="text-muted">No group stage matches found. Import the Excel file from Admin.</p>
+{% endif %}
+
+{% for g in groups_data %}
+<div class="mb-5">
+  <h4 class="mb-3">Group {{ g.letter }}</h4>
+
+  <div class="mb-3">
+    <div class="section-title">Standings (from official results)</div>
+    <div class="table-wrap">
+      <table class="table table-sm table-bordered table-sticky">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Team</th>
+            <th>P</th>
+            <th>W</th>
+            <th>D</th>
+            <th>L</th>
+            <th>GF</th>
+            <th>GA</th>
+            <th>GD</th>
+            <th>Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in g.standings %}
+          <tr>
+            <td>{{ s.rank }}</td>
+            <td class="fw-semibold">{{ s.team }}</td>
+            <td>{{ s.pld }}</td>
+            <td>{{ s.w }}</td>
+            <td>{{ s.d }}</td>
+            <td>{{ s.l }}</td>
+            <td>{{ s.gf }}</td>
+            <td>{{ s.ga }}</td>
+            <td>{{ s.gd }}</td>
+            <td><strong>{{ s.pts }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="small text-muted mt-2 mb-0">Tables fill as soon as both teams’ goals are entered for each match.</p>
+  </div>
+
+  <div class="section-title">Matches</div>
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered bg-white">
+      <thead>
+        <tr>
+          <th>Match</th>
+          <th>Kickoff</th>
+          <th>Official</th>
+          <th>Your prediction</th>
+          <th>Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for match in g.matches %}
+        {% set p = predictions_map.get(match.id) %}
+        <tr>
+          <td>#{{ match.match_no }} — {{ match.team1 }} vs {{ match.team2 }}</td>
+          <td>{{ match.kickoff_at if match.kickoff_at else "—" }}</td>
+          <td>
+            {% if match.official_score1 is not none %}
+              <strong>{{ match.official_score1 }} - {{ match.official_score2 }}</strong>
+            {% else %}
+              <span class="text-muted">Pending admin</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if can_edit_prediction(match) %}
+            <form method="post" action="{{ url_for('group_stage') }}" class="d-flex gap-2 align-items-center flex-wrap">
+              <input type="hidden" name="match_id" value="{{ match.id }}" />
+              <input class="form-control form-control-sm" type="number" min="0" name="pred_score1" value="{{ p.pred_score1 if p else 0 }}" style="width: 80px;" />
+              <span>-</span>
+              <input class="form-control form-control-sm" type="number" min="0" name="pred_score2" value="{{ p.pred_score2 if p else 0 }}" style="width: 80px;" />
+              <button class="btn btn-sm btn-primary" type="submit">Save</button>
+            </form>
+            {% else %}
+              <span>{{ p.pred_score1 if p else "—" }} - {{ p.pred_score2 if p else "—" }}</span>
+              <span class="badge text-bg-secondary">Locked</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p and match.official_score1 is not none %}
+              {{ calculate_points(p, match) }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

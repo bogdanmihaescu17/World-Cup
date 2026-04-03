@@ -4,6 +4,7 @@ Flask + PostgreSQL app with:
 
 - `admin` role: manage users, import Excel data, set official match scores, export ranking
 - `user` role: submit predictions before kickoff, view own predictions, view global ranking
+- **Group stage** (`/group-stage`): group matches only, **group tables** from official results, and **prediction ranking** counting group-stage matches only
 - Scoring rules:
   - exact score = 3 points
   - correct outcome (win/draw/loss), not exact = 1 point
@@ -57,6 +58,7 @@ Set these Railway variables:
 Optional:
 
 - `AUTO_INIT_DB=true` (default)
+- `AUTO_IMPORT_EXCEL=true` (default; imports matches/users if DB has zero matches)
 - `DEFAULT_IMPORTED_USER_PASSWORD=changeme123`
 - `LOG_LEVEL=INFO`
 

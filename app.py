@@ -2,6 +2,7 @@ import csv
 import io
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from functools import wraps
 
@@ -71,7 +72,9 @@ class User(UserMixin, db.Model):
     predictions = db.relationship("Prediction", backref="user", lazy=True)
 
     def set_password(self, raw_password):
-        self.password_hash = generate_password_hash(raw_password)
+        self.password_hash = generate_password_hash(
+            raw_password, method="pbkdf2:sha256"
+        )
 
     def check_password(self, raw_password):
         return check_password_hash(self.password_hash, raw_password)
@@ -155,6 +158,104 @@ def can_edit_prediction(match):
     return now < match.kickoff_at
 
 
+_GROUP_CODE_LETTER = re.compile(r"^([A-L])(\d+)?$", re.IGNORECASE)
+
+
+def group_letter_from_code(group_code):
+    if not group_code:
+        return None
+    s = str(group_code).strip().upper()
+    m = _GROUP_CODE_LETTER.match(s)
+    if not m:
+        return None
+    return m.group(1)
+
+
+def is_group_stage_match(match):
+    return group_letter_from_code(match.group_code) is not None
+
+
+def group_stage_matches_query():
+    return [
+        m
+        for m in Match.query.order_by(
+            Match.kickoff_at.asc().nullslast(), Match.match_no.asc()
+        ).all()
+        if is_group_stage_match(m)
+    ]
+
+
+def compute_group_standings_from_matches(matches):
+    teams = {}
+    for m in matches:
+        for t in (m.team1, m.team2):
+            if t not in teams:
+                teams[t] = {
+                    "team": t,
+                    "pld": 0,
+                    "w": 0,
+                    "d": 0,
+                    "l": 0,
+                    "gf": 0,
+                    "ga": 0,
+                    "pts": 0,
+                }
+    for m in matches:
+        if m.official_score1 is None or m.official_score2 is None:
+            continue
+        s1, s2 = m.official_score1, m.official_score2
+        a, b = m.team1, m.team2
+        teams[a]["pld"] += 1
+        teams[b]["pld"] += 1
+        teams[a]["gf"] += s1
+        teams[a]["ga"] += s2
+        teams[b]["gf"] += s2
+        teams[b]["ga"] += s1
+        if s1 > s2:
+            teams[a]["w"] += 1
+            teams[a]["pts"] += 3
+            teams[b]["l"] += 1
+        elif s2 > s1:
+            teams[b]["w"] += 1
+            teams[b]["pts"] += 3
+            teams[a]["l"] += 1
+        else:
+            teams[a]["d"] += 1
+            teams[b]["d"] += 1
+            teams[a]["pts"] += 1
+            teams[b]["pts"] += 1
+    rows = []
+    for t in teams.values():
+        t["gd"] = t["gf"] - t["ga"]
+        rows.append(t)
+    rows.sort(
+        key=lambda r: (-r["pts"], -r["gd"], -r["gf"], r["team"].lower()),
+    )
+    for idx, r in enumerate(rows, start=1):
+        r["rank"] = idx
+    return rows
+
+
+def group_stage_ranking_rows(gs_ids=None):
+    if gs_ids is None:
+        gs_ids = {m.id for m in group_stage_matches_query()}
+    users = User.query.order_by(User.username.asc()).all()
+    rows = []
+    for user in users:
+        score = 0
+        for p in user.predictions:
+            if p.match_id not in gs_ids:
+                continue
+            pts = calculate_points(p, p.match)
+            if pts is not None:
+                score += pts
+        rows.append({"username": user.username, "role": user.role, "score": score})
+    rows.sort(key=lambda r: (-r["score"], r["username"].lower()))
+    for idx, row in enumerate(rows, start=1):
+        row["rank"] = idx
+    return rows
+
+
 def ensure_default_admin():
     admin_username = os.getenv("ADMIN_USERNAME", "admin")
     admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
@@ -215,6 +316,28 @@ def import_excel_data(file_path):
 
     db.session.commit()
     return imported_matches, imported_users
+
+
+def auto_import_excel_if_empty():
+    if os.getenv("AUTO_IMPORT_EXCEL", "true").lower() != "true":
+        app.logger.info("Automatic Excel import disabled.")
+        return
+
+    if Match.query.count() > 0:
+        app.logger.info("Skipping Excel auto-import because matches already exist.")
+        return
+
+    path = os.getenv("EXCEL_FILE_PATH", "World Cup_2026.xlsx")
+    if not os.path.exists(path):
+        app.logger.warning("Excel auto-import skipped; file not found at %s", path)
+        return
+
+    imported_matches, imported_users = import_excel_data(path)
+    app.logger.info(
+        "Excel auto-import completed. New matches=%s, new users=%s",
+        imported_matches,
+        imported_users,
+    )
 
 
 def ranking_rows():
@@ -326,6 +449,73 @@ def predictions():
         predictions_map=predictions_map,
         calculate_points=calculate_points,
         can_edit_prediction=can_edit_prediction,
+    )
+
+
+@app.route("/group-stage", methods=["GET", "POST"])
+@login_required
+def group_stage():
+    if request.method == "POST":
+        match_id = int(request.form.get("match_id"))
+        score1 = int(request.form.get("pred_score1"))
+        score2 = int(request.form.get("pred_score2"))
+
+        match = Match.query.get_or_404(match_id)
+        if not is_group_stage_match(match):
+            flash("This match is not part of the group stage.", "error")
+            return redirect(url_for("group_stage"))
+        if not can_edit_prediction(match):
+            flash("Prediction is locked after kickoff.", "error")
+            return redirect(url_for("group_stage"))
+
+        pred = Prediction.query.filter_by(
+            user_id=current_user.id, match_id=match.id
+        ).first()
+        if not pred:
+            pred = Prediction(
+                user_id=current_user.id,
+                match_id=match.id,
+                pred_score1=score1,
+                pred_score2=score2,
+            )
+            db.session.add(pred)
+        else:
+            pred.pred_score1 = score1
+            pred.pred_score2 = score2
+        db.session.commit()
+        flash("Prediction saved.", "success")
+        return redirect(url_for("group_stage"))
+
+    all_gs = group_stage_matches_query()
+    gs_ids = {m.id for m in all_gs}
+    letters = sorted(
+        {group_letter_from_code(m.group_code) for m in all_gs},
+    )
+    groups_data = []
+    for letter in letters:
+        g_matches = [
+            m for m in all_gs if group_letter_from_code(m.group_code) == letter
+        ]
+        groups_data.append(
+            {
+                "letter": letter,
+                "matches": g_matches,
+                "standings": compute_group_standings_from_matches(g_matches),
+            }
+        )
+
+    predictions_map = {
+        p.match_id: p
+        for p in Prediction.query.filter_by(user_id=current_user.id).all()
+    }
+    gs_ranking = group_stage_ranking_rows(gs_ids)
+    return render_template(
+        "group_stage.html",
+        groups_data=groups_data,
+        predictions_map=predictions_map,
+        calculate_points=calculate_points,
+        can_edit_prediction=can_edit_prediction,
+        group_stage_ranking_rows=gs_ranking,
     )
 
 
@@ -450,6 +640,7 @@ def init_database():
     with app.app_context():
         db.create_all()
         ensure_default_admin()
+        auto_import_excel_if_empty()
 
 
 if os.getenv("AUTO_INIT_DB", "true").lower() == "true":

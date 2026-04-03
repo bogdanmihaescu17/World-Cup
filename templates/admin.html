@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h3 class="mb-3">Admin Console</h3>
+<h3 class="mb-1">Admin Console</h3>
+<p class="text-muted mb-4">Manage users, import data, publish official scores, and export ranking.</p>
 
 <div class="row g-3 mb-4">
   <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <h5>Create User</h5>
+    <div class="panel-subtle h-100">
+        <div class="section-title">Create User</div>
         <form method="post" action="{{ url_for('admin_create_user') }}">
           <div class="mb-2">
             <input class="form-control" name="username" placeholder="Username" required />
@@ -22,48 +22,52 @@
           </div>
           <button class="btn btn-success" type="submit">Create</button>
         </form>
-      </div>
     </div>
   </div>
   <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <h5>Data Actions</h5>
+    <div class="panel-subtle h-100">
+        <div class="section-title">Data Actions</div>
         <form method="post" action="{{ url_for('admin_import_excel') }}" class="mb-2">
           <button class="btn btn-primary" type="submit">Import from Excel</button>
         </form>
         <a class="btn btn-outline-primary" href="{{ url_for('admin_export_ranking') }}">Export Ranking CSV</a>
-      </div>
     </div>
   </div>
 </div>
 
-<div class="card mb-4">
-  <div class="card-body">
-    <h5>Users</h5>
-    <table class="table table-sm table-bordered">
+<div class="mb-4">
+  <div class="section-title">Users</div>
+  <div class="table-wrap">
+    <table class="table table-sm table-bordered table-sticky">
       <thead>
-        <tr><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr>
+        <tr>
+          <th style="width: 20%;">Username</th>
+          <th style="width: 12%;">Role</th>
+          <th style="width: 20%;">Created</th>
+          <th style="width: 48%;">Actions</th>
+        </tr>
       </thead>
       <tbody>
         {% for user in users %}
         <tr>
-          <td>{{ user.username }}</td>
+          <td class="fw-semibold">{{ user.username }}</td>
           <td>{{ user.role }}</td>
           <td>{{ user.created_at }}</td>
-          <td class="d-flex gap-2">
-            <form method="post" action="{{ url_for('admin_update_user_role', user_id=user.id) }}" class="d-flex gap-1">
-              <select class="form-select form-select-sm" name="role">
-                <option value="user" {% if user.role == 'user' %}selected{% endif %}>user</option>
-                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>admin</option>
-              </select>
-              <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
-            </form>
-            {% if current_user.id != user.id %}
-            <form method="post" action="{{ url_for('admin_delete_user', user_id=user.id) }}">
-              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-            </form>
-            {% endif %}
+          <td>
+            <div class="d-flex flex-wrap gap-2">
+              <form method="post" action="{{ url_for('admin_update_user_role', user_id=user.id) }}" class="d-flex gap-1">
+                <select class="form-select form-select-sm" name="role">
+                  <option value="user" {% if user.role == 'user' %}selected{% endif %}>user</option>
+                  <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>admin</option>
+                </select>
+                <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
+              </form>
+              {% if current_user.id != user.id %}
+              <form method="post" action="{{ url_for('admin_delete_user', user_id=user.id) }}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+              </form>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -72,16 +76,16 @@
   </div>
 </div>
 
-<div class="card">
-  <div class="card-body">
-    <h5>Official Scores (set by admin)</h5>
-    <table class="table table-sm table-striped table-bordered">
+<div>
+  <div class="section-title">Official Scores (set by admin)</div>
+  <div class="table-wrap">
+    <table class="table table-sm table-striped table-bordered table-sticky">
       <thead>
         <tr>
-          <th>Match</th>
-          <th>Kickoff</th>
-          <th>Current Official</th>
-          <th>Update</th>
+          <th style="width: 35%;">Match</th>
+          <th style="width: 20%;">Kickoff</th>
+          <th style="width: 15%;">Current Official</th>
+          <th style="width: 30%;">Update</th>
         </tr>
       </thead>
       <tbody>
