@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">Your Predictions</h3>
+<div class="table-responsive">
+  <table class="table table-striped table-bordered bg-white">
+    <thead>
+      <tr>
+        <th>Match</th>
+        <th>Kickoff</th>
+        <th>Official</th>
+        <th>Your Prediction</th>
+        <th>Points</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for match in matches %}
+      {% set p = predictions_map.get(match.id) %}
+      <tr>
+        <td>#{{ match.match_no }} - {{ match.team1 }} vs {{ match.team2 }}</td>
+        <td>{{ match.kickoff_at if match.kickoff_at else "-" }}</td>
+        <td>
+          {% if match.official_score1 is not none %}
+            <strong>{{ match.official_score1 }} - {{ match.official_score2 }}</strong>
+          {% else %}
+            <span class="text-muted">Pending admin</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if can_edit_prediction(match) %}
+          <form method="post" class="d-flex gap-2 align-items-center">
+            <input type="hidden" name="match_id" value="{{ match.id }}" />
+            <input class="form-control form-control-sm" type="number" min="0" name="pred_score1" value="{{ p.pred_score1 if p else 0 }}" style="width: 80px;" />
+            <span>-</span>
+            <input class="form-control form-control-sm" type="number" min="0" name="pred_score2" value="{{ p.pred_score2 if p else 0 }}" style="width: 80px;" />
+            <button class="btn btn-sm btn-primary" type="submit">Save</button>
+          </form>
+          {% else %}
+            <span>{{ p.pred_score1 }} - {{ p.pred_score2 }}</span>
+            <span class="badge text-bg-secondary">Locked</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if p and match.official_score1 is not none %}
+            {{ calculate_points(p, match) }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
