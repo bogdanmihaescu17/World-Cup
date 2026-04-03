@@ -36,7 +36,30 @@ docker compose up --build
 
 App URL: `http://localhost:5001`
 
-## 4) First login
+## 4) Deploy on Railway
+
+Railway detects `Procfile` automatically.
+
+Start command:
+
+```bash
+gunicorn --bind 0.0.0.0:$PORT app:app
+```
+
+Set these Railway variables:
+
+- `DATABASE_URL` = your Railway Postgres URL
+- `SECRET_KEY` = strong random string
+- `ADMIN_USERNAME` = admin username
+- `ADMIN_PASSWORD` = admin password
+- `EXCEL_FILE_PATH` = `World Cup_2026.xlsx`
+
+Optional:
+
+- `AUTO_INIT_DB=true` (default)
+- `DEFAULT_IMPORTED_USER_PASSWORD=changeme123`
+
+## 5) First login
 
 Default admin credentials come from `.env`:
 
@@ -45,7 +68,7 @@ Default admin credentials come from `.env`:
 
 Change these immediately after first run.
 
-## 5) Import Excel
+## 6) Import Excel
 
 From admin panel click **Import from Excel**.
 

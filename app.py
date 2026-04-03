@@ -422,10 +422,17 @@ def admin_export_ranking():
     )
 
 
-with app.app_context():
-    db.create_all()
-    ensure_default_admin()
+def init_database():
+    with app.app_context():
+        db.create_all()
+        ensure_default_admin()
+
+
+if os.getenv("AUTO_INIT_DB", "true").lower() == "true":
+    init_database()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    port = int(os.getenv("PORT", "5001"))
+    debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug)
